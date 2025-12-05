@@ -1,0 +1,489 @@
+// screens/StudyScreen.js
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+  ScrollView,
+  Alert,
+  useColorScheme,
+} from "react-native";
+
+import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
+import * as Progress from "react-native-progress";
+import * as Speech from "expo-speech";
+import * as Clipboard from "expo-clipboard";
+
+
+
+
+import { uploadStudyImages } from "../utils/api";
+import { shareUniversal, shareWhatsapp, shareEmail } from "../utils/share";
+
+/* -------------------------------------------------------
+   🔄 CONVERSIONE HEIC → JPEG
+-------------------------------------------------------- */
+async function convertToJpegIfNeeded(asset) {
+  let { uri, mimeType } = asset;
+
+  const isHeic =
+    uri?.toLowerCase().endsWith(".heic") ||
+    mimeType === "image/heic" ||
+    mimeType === "image/heif";
+
+  if (!isHeic) {
+    return {
+      uri,
+      name: asset.fileName || "image.jpg",
+      type: "image/jpeg",
+    };
+  }
+
+  console.log("Converto HEIC → JPEG...");
+
+  const manipResult = await ImageManipulator.manipulateAsync(
+    uri,
+    [],
+    { compress: 1, format: ImageManipulator.SaveFormat.JPEG }
+  );
+
+  return {
+    uri: manipResult.uri,
+    name: "converted.jpg",
+    type: "image/jpeg",
+  };
+}
+
+/* -------------------------------------------------------
+   📘 SCREEN PRINCIPALE
+-------------------------------------------------------- */
+export default function StudyScreen() {
+  const [images, setImages] = useState([]);
+  const [finalText, setFinalText] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [mode, setMode] = useState("summary"); // "summary" | "scientific" | "oral"
+
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
+  /* -----------------------------------------------
+     📸 PICKER FOTO
+  ------------------------------------------------ */
+  const pickImages = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        quality: 1,
+      });
+
+      if (!result.canceled) {
+        setImages((old) => [...old, ...result.assets]);
+      }
+    } catch (err) {
+      console.log("Errore galleria:", err);
+    }
+  };
+
+  const takePhoto = async () => {
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+      });
+
+      if (!result.canceled) {
+        setImages((old) => [...old, ...result.assets]);
+      }
+    } catch (err) {
+      console.log("Errore fotocamera:", err);
+    }
+  };
+
+  /* -----------------------------------------------
+     📤 UPLOAD E ANALISI
+  ------------------------------------------------ */
+  const uploadHandler = async () => {
+    if (images.length === 0)
+      return Alert.alert("Errore", "Seleziona almeno una foto");
+
+    setUploading(true);
+    setProgress(0);
+    setFinalText("");
+
+    try {
+      // Converto immagini se HEIC
+      const converted = [];
+      for (let img of images) {
+        const c = await convertToJpegIfNeeded(img);
+        converted.push(c);
+      }
+
+      // Chiamata API — passo la mode scelta
+      const res = await uploadStudyImages(converted, mode, (p) =>
+        setProgress(p)
+      );
+
+      console.log("RISPOSTA SERVER:", res.data);
+      const data = res.data || {};
+
+      let displayText = "";
+
+      if (mode === "scientific") {
+        const steps = data.solutionSteps || "";
+        const finalAnswer = data.finalAnswer
+          ? `\n\nRisposta finale: ${data.finalAnswer}`
+          : "";
+        displayText = (steps + finalAnswer).trim();
+
+        // fallback se per qualche motivo manca tutto
+        if (!displayText) {
+          displayText = data.text || "";
+        }
+      } else {
+        // summary / oral → usiamo il riassunto se presente
+        displayText = data.summary || data.text || "";
+      }
+
+      setFinalText(displayText);
+    } catch (err) {
+      console.log("UPLOAD ERROR:", err);
+      Alert.alert("Errore", err.message || "Errore durante l'upload");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  /* -----------------------------------------------
+     🔊 LETTURA VOCALE
+  ------------------------------------------------ */
+  const speakText = () => {
+    if (!finalText) return;
+    Speech.speak(finalText, { language: "it-IT" });
+  };
+
+  const stopSpeaking = () => Speech.stop();
+
+  /* -----------------------------------------------
+     📋 COPIA TESTO
+  ------------------------------------------------ */
+ const copyToClipboard = async () => {
+  if (!finalText) return;
+  await Clipboard.setStringAsync(finalText);
+  Alert.alert("Copiato", "Testo copiato negli appunti");
+};
+
+
+
+  /* -----------------------------------------------
+     🧹 RESET
+  ------------------------------------------------ */
+  const resetAll = () => {
+    setImages([]);
+    setFinalText("");
+    setProgress(0);
+  };
+
+  /* -----------------------------------------------
+     🎚 UI MODALITÀ
+  ------------------------------------------------ */
+  const modeButtons = [
+    { key: "summary", label: "Riassunto" },
+    { key: "scientific", label: "Scientific" },
+    { key: "oral", label: "Orale" },
+  ];
+
+  const bg = isDark ? "#000" : "#f5f5f5";
+  const cardBg = isDark ? "#111" : "#fff";
+  const textColor = isDark ? "#fff" : "#000";
+  const subText = isDark ? "#ccc" : "#666";
+  const border = isDark ? "#333" : "#ddd";
+
+  /* -----------------------------------------------
+     🖥 UI
+  ------------------------------------------------ */
+  return (
+    <ScrollView
+      contentContainerStyle={[styles.container, { backgroundColor: bg }]}
+    >
+      <Text style={[styles.title, { color: textColor }]}>
+        SmartStudy — Study Mode
+      </Text>
+      <Text style={{ color: subText, marginBottom: 10 }}>
+        Scatta o seleziona foto, scegli la modalità e genera il contenuto.
+      </Text>
+
+      {/* Modalità */}
+      <View style={styles.modeRow}>
+        {modeButtons.map((m) => {
+          const active = mode === m.key;
+          return (
+            <TouchableOpacity
+              key={m.key}
+              style={[
+                styles.modeBtn,
+                {
+                  backgroundColor: active
+                    ? "#4A90E2"
+                    : isDark
+                    ? "#222"
+                    : "#e0e0e0",
+                  borderColor: active ? "#4A90E2" : border,
+                },
+              ]}
+              onPress={() => setMode(m.key)}
+            >
+              <Text
+                style={{
+                  color: active ? "#fff" : textColor,
+                  fontWeight: active ? "bold" : "500",
+                }}
+              >
+                {m.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* Preview immagini */}
+      <View style={styles.imageList}>
+        {images.map((img, i) => (
+          <Image key={i} source={{ uri: img.uri }} style={styles.imageItem} />
+        ))}
+      </View>
+
+      {/* Pulsanti foto */}
+      <View style={styles.row}>
+        <TouchableOpacity style={styles.btn} onPress={pickImages}>
+          <Text style={styles.btnText}>Galleria</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.btn} onPress={takePhoto}>
+          <Text style={styles.btnText}>Scatta</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Upload */}
+      <TouchableOpacity
+        style={[styles.uploadBtn, uploading && { opacity: 0.7 }]}
+        onPress={uploadHandler}
+        disabled={uploading}
+      >
+        <Text style={styles.uploadText}>
+          {uploading ? "Analisi in corso..." : "Analizza"}
+        </Text>
+      </TouchableOpacity>
+
+      {/* Progress */}
+      {uploading && (
+        <Progress.Bar
+          progress={progress}
+          width={250}
+          color="#4CAF50"
+          style={{ marginTop: 15, alignSelf: "center" }}
+        />
+      )}
+
+      {/* TESTO FINALE */}
+      {finalText !== "" && (
+        <View style={[styles.card, { backgroundColor: cardBg, borderColor: border }]}>
+          <Text style={[styles.finalTitle, { color: textColor }]}>
+            Testo Analizzato
+          </Text>
+          <View style={styles.textScrollWrapper}>
+            <ScrollView>
+              <Text style={[styles.finalText, { color: textColor }]}>
+                {finalText}
+              </Text>
+            </ScrollView>
+          </View>
+
+          {/* Azioni testo */}
+          <View style={styles.row}>
+            <TouchableOpacity style={styles.smallBtn} onPress={copyToClipboard}>
+              <Text style={styles.smallBtnText}>Copia</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.smallBtn} onPress={speakText}>
+              <Text style={styles.smallBtnText}>▶️ Leggi</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.smallBtn} onPress={stopSpeaking}>
+              <Text style={styles.smallBtnText}>⏹ Stop</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* 📤 SHARE */}
+          <Text style={[styles.shareTitle, { color: textColor }]}>
+            Condividi
+          </Text>
+
+          <View style={styles.shareRow}>
+            <TouchableOpacity
+              style={styles.shareBtn}
+              onPress={() => shareUniversal(finalText)}
+            >
+              <Text style={styles.shareBtnText}>Share</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.shareBtn, { backgroundColor: "#25D366" }]}
+              onPress={() => shareWhatsapp(finalText)}
+            >
+              <Text style={styles.shareBtnText}>WhatsApp</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.shareBtn, { backgroundColor: "#0072C6" }]}
+              onPress={() => shareEmail("SmartStudy Testo", finalText)}
+            >
+              <Text style={styles.shareBtnText}>Email</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* RESET */}
+          <TouchableOpacity style={styles.resetBtn} onPress={resetAll}>
+            <Text style={styles.resetText}>Reset</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </ScrollView>
+  );
+}
+
+/* -------------------------------------------------------
+   🎨 STILI
+-------------------------------------------------------- */
+const styles = StyleSheet.create({
+  container: {
+    padding: 20,
+    paddingBottom: 60,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: "bold",
+    marginBottom: 6,
+  },
+  modeRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
+  },
+  modeBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  imageList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 15,
+  },
+  imageItem: {
+    width: 90,
+    height: 120,
+    borderRadius: 8,
+  },
+  row: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 10,
+  },
+  btn: {
+    backgroundColor: "#4A90E2",
+    padding: 12,
+    borderRadius: 10,
+    flex: 1,
+    alignItems: "center",
+  },
+  btnText: {
+    color: "white",
+    fontWeight: "bold",
+  },
+  uploadBtn: {
+    backgroundColor: "#4CAF50",
+    marginTop: 15,
+    padding: 15,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  uploadText: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  card: {
+    marginTop: 25,
+    padding: 15,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  finalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  textScrollWrapper: {
+    maxHeight: 260,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#444",
+    padding: 8,
+    marginBottom: 10,
+  },
+  finalText: {
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  smallBtn: {
+    backgroundColor: "#333",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+  },
+  smallBtnText: {
+    color: "white",
+    fontWeight: "600",
+  },
+  shareTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginTop: 16,
+    marginBottom: 6,
+  },
+  shareRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 4,
+    flexWrap: "wrap",
+  },
+  shareBtn: {
+    backgroundColor: "#555",
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 10,
+  },
+  shareBtnText: {
+    color: "white",
+    fontWeight: "600",
+  },
+  resetBtn: {
+    marginTop: 20,
+    backgroundColor: "#E53935",
+    padding: 12,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  resetText: {
+    color: "white",
+    fontWeight: "bold",
+  },
+});

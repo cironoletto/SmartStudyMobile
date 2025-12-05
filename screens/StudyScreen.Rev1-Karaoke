@@ -1,0 +1,696 @@
+// screens/StudyScreen.js
+import React, { useState, useRef, useEffect } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+  ScrollView,
+  Alert,
+  useColorScheme,
+} from "react-native";
+
+import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
+import * as Progress from "react-native-progress";
+import * as Speech from "expo-speech";
+import * as Clipboard from "expo-clipboard";
+
+import { uploadStudyImages } from "../utils/api";
+import { shareUniversal, shareWhatsapp, shareEmail } from "../utils/share";
+
+/* -------------------------------------------------------
+   🔄 CONVERSIONE HEIC → JPEG
+-------------------------------------------------------- */
+async function convertToJpegIfNeeded(asset) {
+  let { uri, mimeType } = asset;
+
+  const isHeic =
+    uri?.toLowerCase().endsWith(".heic") ||
+    mimeType === "image/heic" ||
+    mimeType === "image/heif";
+
+  if (!isHeic) {
+    return {
+      uri,
+      name: asset.fileName || "image.jpg",
+      type: "image/jpeg",
+    };
+  }
+
+  console.log("Converto HEIC → JPEG...");
+
+  const manipResult = await ImageManipulator.manipulateAsync(
+    uri,
+    [],
+    { compress: 1, format: ImageManipulator.SaveFormat.JPEG }
+  );
+
+  return {
+    uri: manipResult.uri,
+    name: "converted.jpg",
+    type: "image/jpeg",
+  };
+}
+
+/* -------------------------------------------------------
+   📘 SCREEN PRINCIPALE
+-------------------------------------------------------- */
+export default function StudyScreen() {
+  const [images, setImages] = useState([]);
+  const [finalText, setFinalText] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [mode, setMode] = useState("summary"); // "summary" | "scientific" | "oral"
+
+  // karaoke: "none" | "word" | "sentence" | "cursor"
+  const [karaokeMode, setKaraokeMode] = useState("none");
+  const [karaokeIndex, setKaraokeIndex] = useState(0);
+  const [isKaraokePlaying, setIsKaraokePlaying] = useState(false);
+
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
+  const wordsRef = useRef([]);
+  const timerRef = useRef(null);
+
+  /* -----------------------------------------------
+     🔁 RICALCOLO WORDS PER KARAOKE QUANDO CAMBIA TESTO
+  ------------------------------------------------ */
+  useEffect(() => {
+    if (finalText) {
+      wordsRef.current = finalText.split(/\s+/).filter(Boolean);
+    } else {
+      wordsRef.current = [];
+    }
+    // reset karaoke quando cambia testo
+    stopKaraoke();
+    setKaraokeIndex(0);
+  }, [finalText]);
+
+  /* -----------------------------------------------
+     🧹 CLEANUP TIMER ALL'UNMOUNT
+  ------------------------------------------------ */
+  useEffect(() => {
+    return () => {
+      stopKaraoke();
+    };
+  }, []);
+
+  const stopKaraoke = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    setIsKaraokePlaying(false);
+    Speech.stop();
+  };
+
+  /* -----------------------------------------------
+     📸 PICKER FOTO
+  ------------------------------------------------ */
+  const pickImages = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        quality: 1,
+      });
+
+      if (!result.canceled) {
+        setImages((old) => [...old, ...result.assets]);
+      }
+    } catch (err) {
+      console.log("Errore galleria:", err);
+    }
+  };
+
+  const takePhoto = async () => {
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+      });
+
+      if (!result.canceled) {
+        setImages((old) => [...old, ...result.assets]);
+      }
+    } catch (err) {
+      console.log("Errore fotocamera:", err);
+    }
+  };
+
+  /* -----------------------------------------------
+     📤 UPLOAD E ANALISI
+  ------------------------------------------------ */
+  const uploadHandler = async () => {
+    if (images.length === 0)
+      return Alert.alert("Errore", "Seleziona almeno una foto");
+
+    setUploading(true);
+    setProgress(0);
+    setFinalText("");
+    stopKaraoke();
+
+    try {
+      // Converto immagini se HEIC
+      const converted = [];
+      for (let img of images) {
+        const c = await convertToJpegIfNeeded(img);
+        converted.push(c);
+      }
+
+      // Chiamata API — passo la mode scelta
+      const res = await uploadStudyImages(converted, mode, (p) =>
+        setProgress(p)
+      );
+
+      console.log("RISPOSTA SERVER:", res.data);
+      const data = res.data || {};
+
+      let displayText = "";
+
+      if (mode === "scientific") {
+        const steps = data.solutionSteps || "";
+        const finalAnswer = data.finalAnswer
+          ? `\n\nRisposta finale: ${data.finalAnswer}`
+          : "";
+        displayText = (steps + finalAnswer).trim();
+
+        // fallback se per qualche motivo manca tutto
+        if (!displayText) {
+          displayText = data.text || "";
+        }
+      } else {
+        // summary / oral → usiamo il riassunto se presente
+        displayText = data.summary || data.text || "";
+      }
+
+      setFinalText(displayText);
+    } catch (err) {
+      console.log("UPLOAD ERROR:", err);
+      Alert.alert("Errore", err.message || "Errore durante l'upload");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  /* -----------------------------------------------
+     🔊 LETTURA / KARAOKE
+  ------------------------------------------------ */
+  const startKaraokeEngine = () => {
+    if (!finalText || wordsRef.current.length === 0) return;
+
+    // reset
+    stopKaraoke();
+    setKaraokeIndex(0);
+
+    // avvio TTS
+    Speech.speak(finalText, { language: "it-IT" });
+
+    setIsKaraokePlaying(true);
+
+    const totalWords = wordsRef.current.length;
+    const baseInterval =
+      karaokeMode === "sentence" ? 700 : 280; // blocchi più lenti per "frasi"
+    const stepSize = karaokeMode === "sentence" ? 6 : 1; // 6 parole alla volta in modalità "frase"
+
+    timerRef.current = setInterval(() => {
+      setKaraokeIndex((prev) => {
+        const next = prev + stepSize;
+        if (next >= totalWords) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+          setIsKaraokePlaying(false);
+        }
+        return Math.min(next, totalWords - 1);
+      });
+    }, baseInterval);
+  };
+
+  const onPressRead = () => {
+    if (!finalText) return;
+
+    if (karaokeMode === "none") {
+      // lettura normale
+      Speech.stop();
+      Speech.speak(finalText, { language: "it-IT" });
+    } else {
+      // modalità karaoke
+      startKaraokeEngine();
+    }
+  };
+
+  const onPressStop = () => {
+    stopKaraoke();
+  };
+
+  /* -----------------------------------------------
+     📋 COPIA TESTO
+  ------------------------------------------------ */
+  const copyToClipboard = async () => {
+    if (!finalText) return;
+    await Clipboard.setStringAsync(finalText);
+    Alert.alert("Copiato", "Testo copiato negli appunti");
+  };
+
+  /* -----------------------------------------------
+     🧹 RESET
+  ------------------------------------------------ */
+  const resetAll = () => {
+    stopKaraoke();
+    setImages([]);
+    setFinalText("");
+    setProgress(0);
+  };
+
+  /* -----------------------------------------------
+     🎚 UI MODALITÀ STUDY
+  ------------------------------------------------ */
+  const modeButtons = [
+    { key: "summary", label: "Riassunto" },
+    { key: "scientific", label: "Scientific" },
+    { key: "oral", label: "Orale" },
+  ];
+
+  /* -----------------------------------------------
+     🎤 UI KARAOKE MODES
+  ------------------------------------------------ */
+  const karaokeButtons = [
+    { key: "none", label: "Normale" },
+    { key: "word", label: "Parole" },
+    { key: "sentence", label: "Blocchi" },
+    { key: "cursor", label: "Cursore" },
+  ];
+
+  const setKaraokeModeSafe = (m) => {
+    stopKaraoke();
+    setKaraokeMode(m);
+    setKaraokeIndex(0);
+  };
+
+  /* -----------------------------------------------
+     🎨 COLORI
+  ------------------------------------------------ */
+  const bg = isDark ? "#050509" : "#050509";
+  const textColor = "#ffffff";
+  const subText = "#9ca3af";
+  const border = "#27272f";
+  const accent = "#1db954"; // Spotify green
+  const accentSoft = "#27272f";
+
+  /* -----------------------------------------------
+     📖 RENDER LYRICS / KARAOKE
+  ------------------------------------------------ */
+  const renderKaraokeText = () => {
+    if (!finalText) return null;
+
+    const words = finalText.split(/\s+/).filter(Boolean);
+    const windowSize = 6; // per "sentence" (blocchi)
+
+    return (
+      <Text style={[styles.finalText, { color: textColor }]}>
+        {words.map((word, index) => {
+          let isActive = false;
+
+          if (karaokeMode === "word" || karaokeMode === "cursor") {
+            isActive = index === karaokeIndex;
+          } else if (karaokeMode === "sentence") {
+            const start = karaokeIndex;
+            const end = karaokeIndex + windowSize;
+            isActive = index >= start && index < end;
+          }
+
+          const highlightStyle =
+            karaokeMode === "cursor"
+              ? styles.cursorWord
+              : isActive
+              ? styles.activeWord
+              : null;
+
+          return (
+            <Text key={index} style={highlightStyle}>
+              {word}
+              {index < words.length - 1 ? " " : ""}
+            </Text>
+          );
+        })}
+      </Text>
+    );
+  };
+
+  /* -----------------------------------------------
+     🖥 UI
+  ------------------------------------------------ */
+  return (
+    <ScrollView
+      contentContainerStyle={[styles.container, { backgroundColor: bg }]}
+    >
+      {/* "HEADER" stile Spotify */}
+      <View style={styles.header}>
+        <View>
+          <Text style={[styles.overline, { color: subText }]}>
+            Study Session
+          </Text>
+          <Text style={[styles.title, { color: textColor }]}>
+            SmartStudy Lyrics
+          </Text>
+          <Text style={{ color: subText, marginTop: 4 }}>
+            Trasforma i tuoi appunti in un'esperienza di ascolto.
+          </Text>
+        </View>
+      </View>
+
+      {/* Modalità studio (summary / scientific / oral) */}
+      <View style={styles.modeRow}>
+        {modeButtons.map((m) => {
+          const active = mode === m.key;
+          return (
+            <TouchableOpacity
+              key={m.key}
+              style={[
+                styles.modeBtn,
+                {
+                  backgroundColor: active ? accent : accentSoft,
+                  borderColor: active ? accent : border,
+                },
+              ]}
+              onPress={() => {
+                setMode(m.key);
+                stopKaraoke();
+              }}
+            >
+              <Text
+                style={{
+                  color: active ? "#000" : "#fff",
+                  fontWeight: active ? "bold" : "500",
+                }}
+              >
+                {m.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* Azioni: immagini + analizza */}
+      <View style={styles.actionsRow}>
+        <TouchableOpacity style={styles.actionBtn} onPress={pickImages}>
+          <Text style={styles.actionBtnText}>Galleria</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={takePhoto}>
+          <Text style={styles.actionBtnText}>Scatta</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.actionBtnPrimary,
+            uploading && { opacity: 0.7 },
+          ]}
+          onPress={uploadHandler}
+          disabled={uploading}
+        >
+          <Text style={styles.actionBtnPrimaryText}>
+            {uploading ? "Analisi..." : "Analizza"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Thumbnail immagini selezionate */}
+      {images.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginTop: 16 }}
+        >
+          {images.map((img, i) => (
+            <Image key={i} source={{ uri: img.uri }} style={styles.imageItem} />
+          ))}
+        </ScrollView>
+      )}
+
+      {/* Progress */}
+      {uploading && (
+        <Progress.Bar
+          progress={progress}
+          width={250}
+          color={accent}
+          style={{ marginTop: 20, alignSelf: "center" }}
+        />
+      )}
+
+      {/* TESTO FINALE / LYRICS */}
+      {finalText !== "" && (
+        <View style={[styles.card, { borderColor: border }]}>
+          {/* Selettore karaoke */}
+          <View style={styles.karaokeRow}>
+            {karaokeButtons.map((k) => {
+              const active = karaokeMode === k.key;
+              return (
+                <TouchableOpacity
+                  key={k.key}
+                  style={[
+                    styles.karaokeBtn,
+                    {
+                      backgroundColor: active ? accent : accentSoft,
+                      borderColor: active ? accent : border,
+                    },
+                  ]}
+                  onPress={() => setKaraokeModeSafe(k.key)}
+                >
+                  <Text
+                    style={{
+                      color: active ? "#000" : "#fff",
+                      fontWeight: active ? "bold" : "500",
+                    }}
+                  >
+                    {k.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <View style={styles.textScrollWrapper}>
+            <ScrollView>
+              {karaokeMode === "none" ? (
+                <Text style={[styles.finalText, { color: textColor }]}>
+                  {finalText}
+                </Text>
+              ) : (
+                renderKaraokeText()
+              )}
+            </ScrollView>
+          </View>
+
+          {/* Azioni testo */}
+          <View style={styles.row}>
+            <TouchableOpacity style={styles.smallBtn} onPress={copyToClipboard}>
+              <Text style={styles.smallBtnText}>Copia</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.smallBtn} onPress={onPressRead}>
+              <Text style={styles.smallBtnText}>
+                {karaokeMode === "none" ? "▶️ Leggi" : "🎤 Karaoke"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.smallBtn} onPress={onPressStop}>
+              <Text style={styles.smallBtnText}>⏹ Stop</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* 📤 SHARE */}
+          <Text style={[styles.shareTitle, { color: subText }]}>
+            Condividi il risultato
+          </Text>
+
+          <View style={styles.shareRow}>
+            <TouchableOpacity
+              style={styles.shareBtn}
+              onPress={() => shareUniversal(finalText)}
+            >
+              <Text style={styles.shareBtnText}>Share</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.shareBtn, { backgroundColor: "#25D366" }]}
+              onPress={() => shareWhatsapp(finalText)}
+            >
+              <Text style={styles.shareBtnText}>WhatsApp</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.shareBtn, { backgroundColor: "#0072C6" }]}
+              onPress={() => shareEmail("SmartStudy Testo", finalText)}
+            >
+              <Text style={styles.shareBtnText}>Email</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* RESET */}
+          <TouchableOpacity style={styles.resetBtn} onPress={resetAll}>
+            <Text style={styles.resetText}>Reset</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </ScrollView>
+  );
+}
+
+/* -------------------------------------------------------
+   🎨 STILI
+-------------------------------------------------------- */
+const styles = StyleSheet.create({
+  container: {
+    padding: 20,
+    paddingBottom: 60,
+  },
+  header: {
+    marginBottom: 18,
+  },
+  overline: {
+    fontSize: 12,
+    textTransform: "uppercase",
+    letterSpacing: 1.5,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: "bold",
+    marginTop: 4,
+  },
+  modeRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
+  },
+  modeBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  actionsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 6,
+  },
+  actionBtn: {
+    flex: 1,
+    backgroundColor: "#27272f",
+    paddingVertical: 10,
+    borderRadius: 999,
+    alignItems: "center",
+  },
+  actionBtnText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+  actionBtnPrimary: {
+    flex: 1.2,
+    backgroundColor: "#1db954",
+    paddingVertical: 10,
+    borderRadius: 999,
+    alignItems: "center",
+  },
+  actionBtnPrimaryText: {
+    color: "#000",
+    fontWeight: "700",
+  },
+  imageItem: {
+    width: 80,
+    height: 100,
+    borderRadius: 10,
+    marginRight: 10,
+    marginTop: 12,
+  },
+  card: {
+    marginTop: 24,
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    backgroundColor: "#111118",
+  },
+  karaokeRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
+  },
+  karaokeBtn: {
+    flex: 1,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  textScrollWrapper: {
+    maxHeight: 320,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#27272f",
+    padding: 12,
+    marginBottom: 12,
+    backgroundColor: "#050509",
+  },
+  finalText: {
+    fontSize: 18,
+    lineHeight: 28,
+  },
+  activeWord: {
+    backgroundColor: "#1db954",
+    color: "#000",
+  },
+  cursorWord: {
+    textDecorationLine: "underline",
+    textDecorationColor: "#1db954",
+  },
+  row: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 6,
+  },
+  smallBtn: {
+    backgroundColor: "#27272f",
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+  },
+  smallBtnText: {
+    color: "#ffffff",
+    fontWeight: "600",
+  },
+  shareTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginTop: 16,
+    marginBottom: 6,
+  },
+  shareRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 4,
+    flexWrap: "wrap",
+  },
+  shareBtn: {
+    backgroundColor: "#555",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+  },
+  shareBtnText: {
+    color: "white",
+    fontWeight: "600",
+  },
+  resetBtn: {
+    marginTop: 20,
+    backgroundColor: "#E53935",
+    padding: 12,
+    borderRadius: 999,
+    alignItems: "center",
+  },
+  resetText: {
+    color: "white",
+    fontWeight: "bold",
+  },
+});

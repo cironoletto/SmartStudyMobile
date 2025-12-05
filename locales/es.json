@@ -1,0 +1,116 @@
+{
+  "hello_user": "¡Hola, {{name}}!",
+  "smart_hub": "Smart Study Hub",
+
+  "your_stats": "Tus estadísticas",
+  "avg_score": "Puntuación media",
+  "best_score": "Mejor resultado",
+  "completed_quizzes": "Quiz completados",
+
+  "your_quizzes": "Tus quiz",
+  "generate_from_photo": "Generar quiz desde foto",
+  "create_quiz": "Crear un nuevo quiz",
+  "quiz_history": "Historial de quiz",
+  "logout": "Cerrar sesión",
+  "privacy_terms": "Privacidad y términos",
+  "terms_of_use": "Términos de uso",
+  "payment_terms": "Condiciones de pago",
+
+  "select_language": "Seleccionar idioma",
+  "home_title": "Inicio",
+
+  "login_title": "Iniciar sesión",
+  "login_username": "Usuario",
+  "login_password": "Contraseña",
+  "login_button": "Entrar",
+  "login_register_link": "¿No tienes cuenta? Regístrate",
+  "login_error": "Error al iniciar sesión",
+
+  "register_title": "Registrarse",
+  "register_fullname": "Nombre completo",
+  "register_username": "Usuario",
+  "register_password": "Contraseña",
+  "register_button": "Crear cuenta",
+  "register_login_link": "¿Ya tienes cuenta? Entrar",
+  "register_success": "¡Registro completado!",
+  "register_error": "No se pudo registrar",
+
+  "quizlist_new": "Nuevo quiz",
+  "quizlist_title": "Tus quiz",
+  "quizlist_empty": "No se encontraron quiz.",
+
+  "quizpreview_title": "Vista previa del quiz",
+  "quizpreview_loading": "Cargando...",
+  "quizpreview_error_title": "Error",
+  "quizpreview_invalid_id": "QuizID no válido",
+  "quizpreview_load_error": "No se pudo cargar el quiz",
+  "quizpreview_start_error": "No se pudo iniciar el intento",
+
+  "quizpreview_questions": "Preguntas",
+  "quizpreview_start_button": "Comenzar quiz",
+  "quizpreview_starting": "Iniciando...",
+  "quizpreview_attempts_button": "Ver intentos anteriores",
+
+  "quizattempt_title": "Realizar quiz",
+  "quizattempt_loading": "Cargando quiz...",
+  "quizattempt_error_title": "Error",
+  "quizattempt_load_error": "No se pudo cargar el quiz",
+  "quizattempt_missing_answers": "Debes responder TODAS las preguntas.",
+  "quizattempt_submit_error": "No se pudieron enviar las respuestas",
+
+  "quizattempt_submit": "Enviar respuestas",
+  "quizattempt_submitting": "Enviando...",
+  "quizattempt_correct": "✓ Respuesta correcta",
+  "quizattempt_wrong": "✗ Respuesta incorrecta",
+  "quizattempt_correct_answer": "✔ Respuesta correcta:",
+  "quizattempt_ideal_answer": "✔ Respuesta ideal:",
+
+  "quizattempt_repeat": "🔁 Repetir quiz",
+  "quizattempt_new": "➕ Crear un nuevo quiz",
+  "quizattempt_history": "📜 Historial del quiz",
+
+  "quizattempt_back_home": "Volverás al inicio en unos segundos...",
+  "quizattempt_answer_placeholder": "Escribe tu respuesta...",
+
+  "quizattempt_read_question": "🔊 Leer pregunta",
+  "quizattempt_read_correct": "🔊 Leer respuesta correcta",
+  "quizattempt_read_ideal": "🔊 Leer respuesta ideal",
+  "quizattempt_listen_all": "🎧 Leer todo el quiz",
+  "quizattempt_stop_audio": "⏹ Parar",
+
+  "quizattempts_title": "Intentos",
+
+  "quizhistory_title": "Historial de quiz",
+  "quizhistory_empty": "Aún no hay quiz completados.",
+  "quizhistory_date": "Fecha:",
+  "quizhistory_score": "Puntuación:",
+  "quizhistory_repeat": "🔁 Repetir este quiz",
+  "quizhistory_clear": "🗑 Borrar historial",
+
+  "audiosettings_title": "Ajustes de audio",
+  "audiosettings_autoplay_results": "Leer resultados automáticamente",
+  "audiosettings_autoplay_correct": "Leer respuestas correctas",
+  "audiosettings_autoplay_ideal": "Leer respuestas ideales",
+  "audiosettings_voice_speed": "Velocidad de la voz",
+  "audiosettings_test_voice": "🔊 Probar voz",
+  "audiosettings_saved": "¡Ajustes guardados!",
+
+  "quizattempt_open_audio_settings": "Abrir ajustes de audio",
+  "quizattempt_auto_read_results": "Leer resultados automáticamente",
+  "quizattempt_voice_speed": "Velocidad de lectura",
+
+  "quizattempt_score": "Respuestas correctas",
+  "quizattempt_out_of": "de",
+  "quizattempt_passed": "Aprobado",
+  "quizattempt_failed": "Reprobado",
+
+  "legal_tab_privacy": "Política de privacidad",
+  "legal_tab_terms": "Términos y condiciones",
+
+  "legal_privacy_title": "📜 Política de privacidad",
+  "legal_privacy_intro": "Esta política explica cómo Smart Study Mobile maneja los datos personales.",
+
+  "legal_terms_title": "📘 Términos y condiciones",
+  "legal_terms_intro": "Al usar Smart Study Mobile, aceptas estos términos."
+}
+

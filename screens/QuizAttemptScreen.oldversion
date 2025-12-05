@@ -1,0 +1,328 @@
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  Button,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
+
+import { fetchQuizDetail, submitAnswers } from "../utils/api";
+import { saveQuizHistory } from "../utils/history";
+import i18n from "../locales/i18n";
+
+export default function QuizAttemptScreen({ route, navigation }) {
+  const { quizID, attemptID } = route.params;
+
+  const [quiz, setQuiz] = useState(null);
+  const [answers, setAnswers] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [results, setResults] = useState(null);
+
+  useEffect(() => {
+    loadQuiz();
+  }, []);
+
+  const loadQuiz = async () => {
+    try {
+      setLoading(true);
+      const res = await fetchQuizDetail(quizID);
+      setQuiz(res.data);
+    } catch (err) {
+      Alert.alert(
+        i18n.t("quizattempt_error_title"),
+        i18n.t("quizattempt_load_error")
+      );
+      navigation.goBack();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const setMCQAnswer = (questionID, choiceIndex) => {
+    if (results) return;
+    setAnswers((prev) => ({
+      ...prev,
+      [questionID]: { type: "mcq", selectedIndex: choiceIndex },
+    }));
+  };
+
+  const setOpenAnswer = (questionID, text) => {
+    if (results) return;
+    setAnswers((prev) => ({
+      ...prev,
+      [questionID]: { type: "open", answerText: text },
+    }));
+  };
+
+  const submit = async () => {
+    if (submitting) return;
+
+    try {
+      // Validazione risposte mancanti
+      const unanswered = quiz.questions.filter((q) => {
+        const ans = answers[q.questionID];
+        if (!ans) return true;
+        if (q.type === "mcq") return ans.selectedIndex === undefined;
+        if (q.type === "open") return !ans.answerText?.trim();
+        return true;
+      });
+
+      if (unanswered.length > 0) {
+        return Alert.alert(
+          i18n.t("quizattempt_error_title"),
+          i18n.t("quizattempt_missing_answers")
+        );
+      }
+
+      setSubmitting(true);
+
+      const payload = Object.keys(answers).map((qID) => ({
+        questionID: parseInt(qID),
+        type: answers[qID].type,
+        selectedIndex: answers[qID].selectedIndex,
+        answerText: answers[qID].answerText,
+      }));
+
+      const res = await submitAnswers(quizID, attemptID, payload);
+      setResults(res.data);
+
+      // Storico quiz
+      if (res.data.totalScore !== undefined) {
+        await saveQuizHistory({
+          quizID,
+          attemptID,
+          title: quiz.quiz.Title,
+          date: new Date().toISOString(),
+          score: res.data.totalScore,
+          maxScore: res.data.maxScore,
+        });
+      }
+
+      setTimeout(() => {
+        navigation.navigate("Home");
+      }, 5000);
+    } catch (err) {
+      Alert.alert(
+        i18n.t("quizattempt_error_title"),
+        i18n.t("quizattempt_submit_error")
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading || !quiz) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator />
+        <Text>{i18n.t("quizattempt_loading")}</Text>
+      </View>
+    );
+  }
+
+  const { quiz: quizMeta, questions } = quiz;
+
+  const isCorrect = (qID) => {
+    if (!results) return null;
+    return results.correctQuestions?.includes(qID);
+  };
+
+  return (
+    <ScrollView style={{ padding: 16 }}>
+      <Text style={styles.quizTitle}>{quizMeta.Title}</Text>
+
+      {questions.map((q) => {
+        const correct = isCorrect(q.questionID);
+
+        return (
+          <View
+            key={q.questionID}
+            style={[
+              styles.questionBox,
+              results && correct && styles.boxCorrect,
+              results && correct === false && styles.boxWrong,
+            ]}
+          >
+            <Text style={styles.questionText}>{q.text}</Text>
+
+            {q.type === "mcq" &&
+              q.choices?.map((c, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  disabled={!!results}
+                  style={[
+                    styles.choiceBtn,
+                    answers[q.questionID]?.selectedIndex === idx &&
+                      styles.choiceSelected,
+                  ]}
+                  onPress={() => setMCQAnswer(q.questionID, idx)}
+                >
+                  <Text>{c}</Text>
+                </TouchableOpacity>
+              ))}
+
+            {q.type === "open" && (
+              <TextInput
+                editable={!results}
+                style={styles.openInput}
+                placeholder={i18n.t("quizattempt_answer_placeholder")}
+                multiline
+                value={answers[q.questionID]?.answerText || ""}
+                onChangeText={(txt) => setOpenAnswer(q.questionID, txt)}
+              />
+            )}
+
+            {results && (
+              <View style={{ marginTop: 8 }}>
+                {correct ? (
+                  <Text style={styles.correctText}>
+                    {i18n.t("quizattempt_correct")}
+                  </Text>
+                ) : (
+                  <>
+                    <Text style={styles.wrongText}>
+                      {i18n.t("quizattempt_wrong")}
+                    </Text>
+
+                    {q.type === "mcq" && (
+                      <Text style={styles.correctAnswer}>
+                        {i18n.t("quizattempt_correct_answer")}{" "}
+                        {q.choices[q.correctIndex] || "?"}
+                      </Text>
+                    )}
+
+                    {q.type === "open" && (
+                      <Text style={styles.correctAnswer}>
+                        {i18n.t("quizattempt_ideal_answer")}{" "}
+                        {q.correctAnswer || "—"}
+                      </Text>
+                    )}
+                  </>
+                )}
+              </View>
+            )}
+          </View>
+        );
+      })}
+
+      {!results && (
+        <Button
+          title={
+            submitting
+              ? i18n.t("quizattempt_submitting")
+              : i18n.t("quizattempt_submit")
+          }
+          onPress={submit}
+          disabled={submitting}
+        />
+      )}
+
+      {results && (
+        <View style={{ marginTop: 30 }}>
+          <TouchableOpacity
+            style={styles.repeatBtn}
+            onPress={() =>
+              navigation.replace("QuizAttemptScreen", { quizID, attemptID })
+            }
+          >
+            <Text style={styles.repeatText}>
+              {i18n.t("quizattempt_repeat")}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.newBtn}
+            onPress={() => navigation.navigate("CreateQuiz")}
+          >
+            <Text style={styles.newText}>
+              {i18n.t("quizattempt_new")}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => navigation.navigate("QuizHistory")}
+          >
+            <Text>{i18n.t("quizattempt_history")}</Text>
+          </TouchableOpacity>
+
+          <Text style={{ textAlign: "center", marginTop: 10, fontStyle: "italic" }}>
+            {i18n.t("quizattempt_back_home")}
+          </Text>
+        </View>
+      )}
+    </ScrollView>
+  );
+}
+
+// -------------------------------
+const styles = StyleSheet.create({
+  center: { flex: 1, alignItems: "center", justifyContent: "center" },
+  quizTitle: { fontSize: 22, fontWeight: "bold", marginBottom: 16 },
+  questionBox: {
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: "#f3f3f3",
+  },
+  boxCorrect: {
+    backgroundColor: "#d1fae5",
+    borderColor: "#10b981",
+    borderWidth: 2,
+  },
+  boxWrong: {
+    backgroundColor: "#fee2e2",
+    borderColor: "#ef4444",
+    borderWidth: 2,
+  },
+  questionText: {
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  choiceBtn: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: "#ddd",
+    marginVertical: 4,
+  },
+  choiceSelected: {
+    backgroundColor: "#93c5fd",
+  },
+  openInput: {
+    borderWidth: 1,
+    borderColor: "#bbb",
+    borderRadius: 6,
+    backgroundColor: "#fff",
+    padding: 8,
+    minHeight: 80,
+  },
+  correctText: { color: "#065f46", fontWeight: "bold" },
+  wrongText: { color: "#b91c1c", fontWeight: "bold" },
+  correctAnswer: { marginTop: 4, color: "#065f46", fontStyle: "italic" },
+  repeatBtn: {
+    backgroundColor: "#2563eb",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  repeatText: {
+    color: "white",
+    textAlign: "center",
+    fontWeight: "bold",
+  },
+  newBtn: {
+    backgroundColor: "#16a34a",
+    padding: 12,
+    borderRadius: 8,
+  },
+  newText: {
+    color: "white",
+    textAlign: "center",
+    fontWeight: "bold",
+  },
+});

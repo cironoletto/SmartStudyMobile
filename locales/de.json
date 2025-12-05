@@ -1,0 +1,106 @@
+{
+  "hello_user": "Hallo, {{name}}!",
+  "smart_hub": "Smart Study Hub",
+
+  "your_stats": "Deine Statistiken",
+  "avg_score": "Durchschnittliche Punktzahl",
+  "best_score": "Bestes Ergebnis",
+  "completed_quizzes": "Abgeschlossene Quiz",
+
+  "your_quizzes": "Deine Quiz",
+  "generate_from_photo": "Quiz aus Foto erstellen",
+  "create_quiz": "Neues Quiz erstellen",
+  "quiz_history": "Quizverlauf",
+  "logout": "Abmelden",
+  "privacy_terms": "Datenschutz & Bedingungen",
+  "terms_of_use": "Nutzungsbedingungen",
+  "payment_terms": "Zahlungsbedingungen",
+
+  "select_language": "Sprache auswählen",
+  "home_title": "Startseite",
+
+  "login_title": "Anmelden",
+  "login_username": "Benutzername",
+  "login_password": "Passwort",
+  "login_button": "Login",
+  "login_register_link": "Kein Konto? Registrieren",
+  "login_error": "Anmeldung fehlgeschlagen",
+
+  "register_title": "Registrieren",
+  "register_fullname": "Vollständiger Name",
+  "register_username": "Benutzername",
+  "register_password": "Passwort",
+  "register_button": "Konto erstellen",
+  "register_login_link": "Schon ein Konto? Login",
+  "register_success": "Registrierung erfolgreich!",
+  "register_error": "Registrierung fehlgeschlagen",
+
+  "quizlist_new": "Neues Quiz",
+  "quizlist_title": "Deine Quiz",
+  "quizlist_empty": "Keine Quiz gefunden.",
+
+  "quizpreview_title": "Quizvorschau",
+  "quizpreview_loading": "Laden...",
+  "quizpreview_error_title": "Fehler",
+  "quizpreview_invalid_id": "Ungültige QuizID",
+  "quizpreview_load_error": "Quiz konnte nicht geladen werden",
+  "quizpreview_start_error": "Quiz konnte nicht gestartet werden",
+
+  "quizpreview_questions": "Fragen",
+  "quizpreview_start_button": "Quiz starten",
+  "quizpreview_starting": "Startet...",
+  "quizpreview_attempts_button": "Frühere Versuche ansehen",
+
+  "quizattempt_title": "Quiz durchführen",
+  "quizattempt_loading": "Lade Quiz...",
+  "quizattempt_error_title": "Fehler",
+  "quizattempt_load_error": "Quiz konnte nicht geladen werden",
+  "quizattempt_missing_answers": "Alle Fragen müssen beantwortet werden.",
+  "quizattempt_submit_error": "Antworten konnten nicht gesendet werden",
+
+  "quizattempt_submit": "Antworten senden",
+  "quizattempt_submitting": "Senden...",
+  "quizattempt_correct": "✓ Richtig",
+  "quizattempt_wrong": "✗ Falsch",
+  "quizattempt_correct_answer": "✔ Richtige Antwort:",
+  "quizattempt_ideal_answer": "✔ Ideale Antwort:",
+
+  "quizattempt_repeat": "🔁 Quiz wiederholen",
+  "quizattempt_new": "➕ Neues Quiz erstellen",
+  "quizattempt_history": "📜 Verlauf",
+
+  "quizattempt_back_home": "Du wirst gleich zur Startseite zurückgeleitet...",
+  "quizattempt_answer_placeholder": "Antwort eingeben...",
+
+  "quizattempt_read_question": "🔊 Frage vorlesen",
+  "quizattempt_read_correct": "🔊 Richtige Antwort vorlesen",
+  "quizattempt_read_ideal": "🔊 Ideale Antwort vorlesen",
+  "quizattempt_listen_all": "🎧 Gesamtes Quiz vorlesen",
+  "quizattempt_stop_audio": "⏹ Stopp",
+
+  "quizattempts_title": "Versuche",
+
+  "quizhistory_title": "Quizverlauf",
+  "quizhistory_empty": "Keine Quiz abgeschlossen.",
+  "quizhistory_date": "Datum:",
+  "quizhistory_score": "Punkte:",
+  "quizhistory_repeat": "🔁 Wiederholen",
+  "quizhistory_clear": "🗑 Löschen",
+
+  "audiosettings_title": "Audioeinstellungen",
+  "audiosettings_autoplay_results": "Ergebnisse automatisch vorlesen",
+  "audiosettings_autoplay_correct": "Richtige Antworten vorlesen",
+  "audiosettings_autoplay_ideal": "Ideale Antworten vorlesen",
+  "audiosettings_voice_speed": "Sprechgeschwindigkeit",
+  "audiosettings_test_voice": "🔊 Stimme testen",
+  "audiosettings_saved": "Einstellungen gespeichert!",
+
+  "legal_tab_privacy": "Datenschutz",
+  "legal_tab_terms": "Nutzungsbedingungen",
+
+  "legal_privacy_title": "📜 Datenschutzrichtlinie",
+  "legal_privacy_intro": "Diese Richtlinie beschreibt, wie Smart Study Mobile persönliche Daten verarbeitet.",
+
+  "legal_terms_title": "📘 Nutzungsbedingungen",
+  "legal_terms_intro": "Durch Nutzung von Smart Study Mobile akzeptieren Sie diese Bedingungen."
+}

@@ -1,0 +1,118 @@
+{
+  "hello_user": "Bonjour, {{name}} !",
+  "smart_hub": "Smart Study Hub",
+
+  "your_stats": "Vos statistiques",
+  "avg_score": "Score moyen",
+  "best_score": "Meilleur résultat",
+  "completed_quizzes": "Quiz complétés",
+
+  "your_quizzes": "Vos quiz",
+  "generate_from_photo": "Générer un quiz à partir d’une photo",
+  "create_quiz": "Créer un nouveau quiz",
+  "quiz_history": "Historique des quiz",
+  "logout": "Déconnexion",
+  "privacy_terms": "Confidentialité et conditions",
+  "terms_of_use": "Conditions d’utilisation",
+  "payment_terms": "Conditions de paiement",
+
+  "select_language": "Sélectionner la langue",
+  "home_title": "Accueil",
+
+  "login_title": "Connexion",
+  "login_username": "Nom d’utilisateur",
+  "login_password": "Mot de passe",
+  "login_button": "Se connecter",
+  "login_register_link": "Pas de compte ? Inscrivez-vous",
+  "login_error": "Échec de la connexion",
+
+  "register_title": "Inscription",
+  "register_fullname": "Nom complet",
+  "register_username": "Nom d’utilisateur",
+  "register_password": "Mot de passe",
+  "register_button": "Créer un compte",
+  "register_login_link": "Vous avez déjà un compte ? Connexion",
+  "register_success": "Inscription réussie !",
+  "register_error": "Impossible de s’inscrire",
+
+  "quizlist_new": "Nouveau quiz",
+  "quizlist_title": "Vos quiz",
+  "quizlist_empty": "Aucun quiz trouvé.",
+
+  "quizpreview_title": "Aperçu du quiz",
+  "quizpreview_loading": "Chargement...",
+  "quizpreview_error_title": "Erreur",
+  "quizpreview_invalid_id": "QuizID invalide",
+  "quizpreview_load_error": "Impossible de charger le quiz",
+  "quizpreview_start_error": "Impossible de démarrer la tentative",
+
+  "quizpreview_questions": "Questions",
+  "quizpreview_start_button": "Commencer le quiz",
+  "quizpreview_starting": "Démarrage...",
+  "quizpreview_attempts_button": "Voir les tentatives précédentes",
+
+  "quizattempt_title": "Effectuer le quiz",
+  "quizattempt_loading": "Chargement du quiz...",
+  "quizattempt_error_title": "Erreur",
+  "quizattempt_load_error": "Impossible de charger le quiz",
+  "quizattempt_missing_answers": "Vous devez répondre à TOUTES les questions.",
+  "quizattempt_submit_error": "Impossible d’envoyer les réponses",
+
+  "quizattempt_submit": "Envoyer les réponses",
+  "quizattempt_submitting": "Envoi...",
+  "quizattempt_correct": "✓ Réponse correcte",
+  "quizattempt_wrong": "✗ Réponse incorrecte",
+  "quizattempt_correct_answer": "✔ Réponse correcte :",
+  "quizattempt_ideal_answer": "✔ Réponse idéale :",
+
+  "quizattempt_repeat": "🔁 Refaire le quiz",
+  "quizattempt_new": "➕ Créer un nouveau quiz",
+  "quizattempt_history": "📜 Historique des quiz",
+
+  "quizattempt_back_home": "Retour à l’accueil dans quelques secondes...",
+  "quizattempt_answer_placeholder": "Tapez votre réponse...",
+
+  "quizattempt_read_question": "🔊 Lire la question",
+  "quizattempt_read_correct": "🔊 Lire la réponse correcte",
+  "quizattempt_read_ideal": "🔊 Lire la réponse idéale",
+  "quizattempt_listen_all": "🎧 Lire tout le quiz",
+  "quizattempt_stop_audio": "⏹ Arrêter",
+
+  "quizattempts_title": "Tentatives",
+
+  "quizhistory_title": "Historique des quiz",
+  "quizhistory_empty": "Aucun quiz complété.",
+  "quizhistory_date": "Date :",
+  "quizhistory_score": "Score :",
+  "quizhistory_repeat": "🔁 Refaire ce quiz",
+  "quizhistory_clear": "🗑 Effacer l’historique",
+
+  "audiosettings_title": "Paramètres audio",
+  "audiosettings_autoplay_results": "Lecture automatique des résultats",
+  "audiosettings_autoplay_correct": "Lire les réponses correctes",
+  "audiosettings_autoplay_ideal": "Lire les réponses idéales",
+  "audiosettings_voice_speed": "Vitesse de la voix",
+  "audiosettings_test_voice": "🔊 Tester la voix",
+  "audiosettings_saved": "Paramètres sauvegardés !",
+
+  "quizattempt_open_audio_settings": "Ouvrir les paramètres audio",
+  "quizattempt_auto_read_results": "Lire automatiquement les résultats",
+  "quizattempt_voice_speed": "Vitesse de lecture",
+  
+  "quizattempt_score": "Questions correctes",
+  "quizattempt_out_of": "sur",
+  "quizattempt_passed": "Réussi",
+  "quizattempt_failed": "Échoué",
+
+  "legal_tab_privacy": "Politique de confidentialité",
+  "legal_tab_terms": "Termes et conditions",
+
+  "study_take_photo": "Prendre une photo",
+
+
+  "legal_privacy_title": "📜 Politique de confidentialité",
+  "legal_privacy_intro": "Cette politique explique la gestion des données personnelles dans Smart Study Mobile.",
+
+  "legal_terms_title": "📘 Termes et conditions",
+  "legal_terms_intro": "En utilisant Smart Study Mobile, vous acceptez ces termes."
+}
